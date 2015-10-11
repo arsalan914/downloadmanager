@@ -1,10 +1,10 @@
-# downloadmanager
-a download manager like internet download manager(under development)
+Disclaimer:
+You can only use the code for personal use.
+Use of code for commercial usage will require permissions from the author(Arsalan saleem:arsalan914@gmail.com)
+If you want to play your part in development then email me at arsalan914@gmail.com and i will add you as a collabirator :)
 
-What is done?
-=>interrupted download functionality is done and tested.
+Development information
+=>All code is written in C language.
+=>platform is windows.
+=>Development is done on VS Express 2013.
 
-What is left?
-=>https support
-=>integration with a browser
-=>http protocol related things such as redirection, no content length given

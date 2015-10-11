@@ -1,0 +1,25 @@
+//File pause resume logic
+
+=>thread,start,end,remain
+
+0 , 0     , 2047   , 2048
+1 , 2048  , 4095   , 2048
+.
+.
+.
+.//all thread entries
+.
+0 , 0     , 2047   , 2000
+1 , 2048  , 4095   , 1000
+.
+.
+.
+.
+
+new start = end + 1 - remain //might be wrong 
+          = 4095 + 1 - 1000 = 3096 
+
+
+//DB to be created
+
+=>id,fn,thread,start,end,remain

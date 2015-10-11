@@ -1,0 +1,16 @@
+What is done?
+=>interrupted download functionality is done and tested.
+
+What is left?
+=>https support
+=>integration with a browser
+=>http protocol cases such as redirection, no content length given
+
+Development information
+=>All code is written in C language.
+=>platform is windows.
+=>Development is done on VS Express 2013.
+
+
+note:
+case where one of the threads has completely downloaded its data is not tested.i suspect it might have some bugs.
