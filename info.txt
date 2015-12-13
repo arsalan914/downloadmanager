@@ -1,5 +1,6 @@
 What is done?
 =>interrupted download functionality is done and tested.
+=>v3.0 contains support of select which ensures if internet is diconnected the processing does not reach 100% and also ensures download in resumed after internet is availbale.
 
 What is left?
 =>https support

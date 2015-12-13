@@ -1,6 +1,7 @@
 #include "sock.h"
 #include <ws2tcpip.h>
 #include <stdio.h>
+#include <Time.h>
 
 /*
 TODO: handle case where hostname is IP.
@@ -54,4 +55,18 @@ int SOCK_CONNECT(char *hostname, char * port, SOCKET *sock)
 
 	return 0;
 
+}
+
+int SOCK_readyToReceive(int sock, int interval )
+{
+	fd_set fds;
+	struct timeval tv;
+
+	FD_ZERO(&fds);
+	FD_SET(sock, &fds);
+
+	tv.tv_sec = interval;
+	tv.tv_usec = 0;
+
+	return (select(sock + 1, &fds, 0, 0, &tv) == 1);
 }

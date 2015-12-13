@@ -169,6 +169,13 @@ int main()
 	/* Send the data. */
 	tx = send(ConnectSocket, tx_buff, strlen(tx_buff), 0);
 
+	/* Wait for data for two seconds.*/
+	if (!(SOCK_readyToReceive(ConnectSocket, 50)))
+	{
+		printf("\r\nUnable to receive data.");
+		exit(1);
+	}
+	
 	/* Receive the data.*/
 	rx = recv(ConnectSocket, rx_buff, 1000, 0);
 
@@ -205,7 +212,7 @@ int main()
 		/* Set end value of the 'Range' header. */
 		p1.end += DOWNLOAD_CHUNK_SIZE;
 
-		/* TODO:cHECK  moved in thread probably.Check in the table for the entry of the same filename and thread number and load end,start and remaining.*/
+		/* CHECK  moved in thread .Check in the table for the entry of the same filename and thread number and load end,start and remaining.*/
 
 		/* If end value is greater than the actual size of the file .*/
 		if (p1.end > size)
@@ -416,8 +423,7 @@ DWORD WINAPI DownloadChunkThread(LPVOID arg)
 	strcpy(data.filename, FILENAME);
 	data.thread_number = thread_i;
 
-	//TODO: Add logic here which will read the table to handle the case where this download is being resumed.
-
+	//logic here which will read the table to handle the case where this download is being resumed.
 	get_thread_details(db, &data);
 	
 	/* if no entry is found then data variable memory would have been set to -1 so checking any member for -1 will tell if no entry was found. */
@@ -455,148 +461,162 @@ DWORD WINAPI DownloadChunkThread(LPVOID arg)
 		}
 	}
 
-//	if (size > 0)
-	{
+	//	GLOBAL += size;
+	//	printf("\nsize =%d\nglobal=%d\n", size, GLOBAL);
+	//	Sleep(10);
 
-		//	GLOBAL += size;
-		//	printf("\nsize =%d\nglobal=%d\n", size, GLOBAL);
-		//	Sleep(10);
-
-		//    while(size  > 0)
-		{
-			// Initialize Winsock
-			iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-			if (iResult != 0) {
-				printf("WSAStartup failed with error: %d\n", iResult);
-				return 1;
-			}
-
-			if (SOCK_CONNECT(HOST, PORT, &ConnectSocket) != 0)
-			{
-				printf("Faied to connect to server");
-				return 0;
-			}
-
-			if (ConnectSocket == INVALID_SOCKET) {
-				printf("Unable to connect to server!\n");
-				WSACleanup();
-				return 1;
-			}
-
-			/* Set 'rx_ptr' pointer to the start of buffer in which data will be recvd.*/
-			rx_ptr = rx_buff;
-
-			/* Convert start and end values into string. */
-			sprintf(start_s, "%d", p1.start);
-			sprintf(end_s, "%d", p1.end);
-
-			/* populate range header's value part.*/
-			sprintf(header_value_ptr, "bytes=%s-%s", start_s, end_s);
-
-			//        printf("\r\nstart =%s\r\n",start_s);
-			//        printf("\r\nend =%s\r\n",end_s);
-
-			/* Set 'tx_ptr' pointer to the start of buffer in which data sent will be stored.*/
-			tx_ptr = tx_buff;
-
-			tx_ptr += HTTP_Build_Get_Req_Line(tx_ptr, PATH);
-
-			tx_ptr += HTTP_Add_Header(tx_ptr, "User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36", 1);
-			tx_ptr += HTTP_Add_Header(tx_ptr, "Host", HOST, 1);
-			tx_ptr += HTTP_Add_Header(tx_ptr, "Accept", "*/*", 1);
-			tx_ptr += HTTP_Add_Header(tx_ptr, "Range", header_value, 0);
-
-			printf("\r\n%s\r\n", tx_buff);
-
-			tx = send(ConnectSocket, tx_buff, strlen(tx_buff), 0);
-
-			rx = recv(ConnectSocket, rx_buff, 1000, 0);
-
-			//        printf("\r\n rx data= %s\r\n", rx_buff);
-
-			if (rx <= 0)
-			{
-				printf("\nERROR:No data received from server\n");
-				return 0;
-			}
-
-			/* Move to the content body. */
-			while (memcmp(rx_ptr, "\r\n\r\n", 4) != 0)
-			{
-				rx_ptr++;
-			}
-
-			/* Move ahead of CRLF CRLF. */
-			if (memcmp(rx_ptr, "\r\n\r\n", 4) == 0)
-			{
-				rx_ptr += 4;
-			}
-
-			else
-			{
-				printf("error\n");
-				Sleep(7000);
-				return 0;
-			}
-
-			/* Loop until all data is recvd. */
-			while (size > 0)
-			{
-				//            printf("\r\ntotal = %d\r\nfile data size = %d\r\n",rx, (int)(rx - (rx_ptr - rx_buff)));
-
-				/* Copy actual data i.e http body part only excluding the http headers. */
-				if ((int)(rx - (rx_ptr - rx_buff)) > 0)
-				{
-					/* write only the file data i.e (total received minus the headers and CRLF and CRLF)*/
-					GLOBAL += fwrite(rx_ptr, 1, (int)(rx - (rx_ptr - rx_buff)), output);
-				}
-
-				//      printf("\r\n file data= %s\r\n", rx_ptr);
-
-				/* Subtract the number of bytes of file data received i.e (total received minus headers and CRLF and CRLF). */
-				size -= (int)(rx - (rx_ptr - rx_buff));
-
-				//			while (WaitForSingleObject(ghSemaphore, 0L) != WAIT_OBJECT_0)
-				//			{
-				//				Sleep(1);
-				//			}
-				//			open_db(DB_NAME, &db);
-
-				counter++;
-				if (counter % 400 == 0)
-					update_entry(db, FILENAME, thread_id, size);
-
-
-				//			close_db(db);
-				//			ReleaseSemaphore(ghSemaphore, 1, NULL);
-
-				//            TOTAL_RECVD += (int)(rx - (rx_ptr - rx_buff));
-				//            printf("\nRemainging=%d\n",size );
-
-				//            printf("\nPercentage %f\n", (float)TOTAL_RECVD/(float)TOTAL_SIZE*100);
-
-				/* Recv data only if there is some otherwise this will block forever. */
-				if (size > 0)
-				{
-					memset(rx_buff, 0, sizeof(rx_buff));
-
-					rx = recv(ConnectSocket, rx_buff, 200, 0);
-
-					//				printf("\r\n%s\r\n",rx_buff);
-
-				}
-				else
-				{
-					break;
-				}
-
-				//            printf("\nrx=%d\n",rx);
-				rx_ptr = rx_buff;
-			}
-
-			closesocket(ConnectSocket);
-		}
+	// Initialize Winsock
+	iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+	if (iResult != 0) {
+		printf("WSAStartup failed with error: %d\n", iResult);
+		return 1;
 	}
+
+	if (SOCK_CONNECT(HOST, PORT, &ConnectSocket) != 0)
+	{
+		printf("Faied to connect to server");
+		return 0;
+	}
+
+	if (ConnectSocket == INVALID_SOCKET) {
+		printf("Unable to connect to server!\n");
+		WSACleanup();
+		return 1;
+	}
+
+	/* Set 'rx_ptr' pointer to the start of buffer in which data will be recvd.*/
+	rx_ptr = rx_buff;
+
+	/* Convert start and end values into string. */
+	sprintf(start_s, "%d", p1.start);
+	sprintf(end_s, "%d", p1.end);
+
+	/* populate range header's value part.*/
+	sprintf(header_value_ptr, "bytes=%s-%s", start_s, end_s);
+
+	//        printf("\r\nstart =%s\r\n",start_s);
+	//        printf("\r\nend =%s\r\n",end_s);
+
+	/* Set 'tx_ptr' pointer to the start of buffer in which data sent will be stored.*/
+	tx_ptr = tx_buff;
+
+	tx_ptr += HTTP_Build_Get_Req_Line(tx_ptr, PATH);
+
+	tx_ptr += HTTP_Add_Header(tx_ptr, "User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36", 1);
+	tx_ptr += HTTP_Add_Header(tx_ptr, "Host", HOST, 1);
+	tx_ptr += HTTP_Add_Header(tx_ptr, "Accept", "*/*", 1);
+	tx_ptr += HTTP_Add_Header(tx_ptr, "Range", header_value, 0);
+
+	printf("\r\n%s\r\n", tx_buff);
+
+	tx = send(ConnectSocket, tx_buff, strlen(tx_buff), 0);
+
+	/* Wait for data for two seconds.*/
+	if (!(SOCK_readyToReceive(ConnectSocket, 50)))
+	{
+		printf("\r\nUnable to receive data.");
+		exit(1);
+	}
+
+	rx = recv(ConnectSocket, rx_buff, 1000, 0);
+
+	//        printf("\r\n rx data= %s\r\n", rx_buff);
+
+	if (rx <= 0)
+	{
+		printf("\nERROR:No data received from server\n");
+		return 0;
+	}
+
+	/* Move to the content body. */
+	while (memcmp(rx_ptr, "\r\n\r\n", 4) != 0)
+	{
+		rx_ptr++;
+	}
+
+	/* Move ahead of CRLF CRLF. */
+	if (memcmp(rx_ptr, "\r\n\r\n", 4) == 0)
+	{
+		rx_ptr += 4;
+	}
+
+	else
+	{
+		printf("error\n");
+		Sleep(7000);
+		return 0;
+	}
+
+	/* Loop until all data is recvd. */
+	while (size > 0)
+	{
+//            printf("\r\ntotal = %d\r\nfile data size = %d\r\n",rx, (int)(rx - (rx_ptr - rx_buff)));
+
+		/* Copy actual data i.e http body part only excluding the http headers. */
+		if ((int)(rx - (rx_ptr - rx_buff)) > 0)
+		{
+			/* write only the file data i.e (total received minus the headers and CRLF and CRLF)*/
+			GLOBAL += fwrite(rx_ptr, 1, (int)(rx - (rx_ptr - rx_buff)), output);
+		}
+
+//      printf("\r\n file data= %s\r\n", rx_ptr);
+
+		/* Subtract the number of bytes of file data received i.e (total received minus headers and CRLF and CRLF). */
+		size -= (int)(rx - (rx_ptr - rx_buff));
+
+//			while (WaitForSingleObject(ghSemaphore, 0L) != WAIT_OBJECT_0)
+//			{
+//				Sleep(1);
+//			}
+//			open_db(DB_NAME, &db);
+
+		counter++;
+		/* Update entry in data base if count % 400 is zero. This is done because accessing the database too often caused the program to
+			be very slow.*/
+		if (counter % 400 == 0)
+		{
+			update_entry(db, FILENAME, thread_id, size);
+		}
+
+//			close_db(db);
+//			ReleaseSemaphore(ghSemaphore, 1, NULL);
+
+//            TOTAL_RECVD += (int)(rx - (rx_ptr - rx_buff));
+//            printf("\nRemainging=%d\n",size );
+
+//            printf("\nPercentage %f\n", (float)TOTAL_RECVD/(float)TOTAL_SIZE*100);
+
+		/* Recv data only if there is some otherwise break. */
+		if (size > 0)
+		{
+			/* Clear the buffer.*/
+			memset(rx_buff, 0, sizeof(rx_buff));
+
+			/* Wait for data for two seconds.*/
+			if (!(SOCK_readyToReceive(ConnectSocket, 50)))
+			{
+				printf("\r\nUnable to receive data.");
+				exit(1);
+			}
+
+			rx = recv(ConnectSocket, rx_buff, 200, 0);
+
+//				printf("\r\n%s\r\n",rx_buff);
+
+		}
+		else
+		{
+			break;
+		}
+
+//            printf("\nrx=%d\n",rx);
+
+		/* Set the 'rx_ptr' to point to start of 'rx_buff'. */
+		rx_ptr = rx_buff;
+	}
+
+	/* Close the socket.*/
+	closesocket(ConnectSocket);
 
 	update_entry(db, FILENAME, thread_id, size);
 
